@@ -1,6 +1,11 @@
 package routes
 
-import "strings"
+import (
+	"net/http"
+	"strings"
+
+	"github.com/AKiranB/linkedin-scraper-microservice/src/utils"
+)
 
 type LinkedInClient struct {
 	BaseUrl string
@@ -36,6 +41,18 @@ type QueryParams struct {
 	JobType         string `url:"f_JT,omitempty"`
 	Start           int    `url:"start"`
 	SortBy          string `url:"sortBy,omitempty"`
+}
+
+type Body struct {
+	Keywords        string `json:"keywords"`
+	Location        string `json:"location"`
+	DateSincePosted string `json:"date_since_posted,omitempty"`
+	Salary          string `json:"salary,omitempty"`
+	ExperienceLevel string `json:"experience_level,omitempty"`
+	RemoteType      string `json:"remote_type,omitempty"`
+	JobType         string `json:"job_type,omitempty"`
+	Start           int    `json:"start,omitempty"`
+	SortBy          string `json:"sort_by,omitempty"`
 }
 
 func format(str string) string {
@@ -76,3 +93,51 @@ func getRemoteFilter(remoteType string) string {
 	}
 	return remoteFilterRange[format(remoteType)]
 }
+
+func getDateSincePosted(dateSincePosted string) string {
+	dateRange := map[string]string{
+		"past month": "r2592000",
+		"past week":  "r604800",
+		"24hr":       "r86400",
+		"8hr":        "r28800",
+		"1hr":        "r3600",
+	}
+	return dateRange[format(dateSincePosted)]
+}
+
+func getSalary(salary string) string {
+	salaryRange := map[string]string{
+		"40000": "1",
+		"60000": "2",
+		"80000": "3",
+		"100000": "4",
+		"120000": "5",
+	}
+	return salaryRange[format(salary)]
+}
+
+
+func JobsHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := utils.Decode[Body](r)
+
+		if err != nil {
+			utils.Encode(w, http.StatusBadRequest, "Invalid request body")
+		}
+
+		queryParams := QueryParams{
+			Keywords: body.Keywords,
+			Location: body.Location,
+			Start:    body.Start,
+			SortBy:   body.SortBy,
+			Salary:  getSalary(body.Salary),
+			ExperienceLevel: getExperienceLevel(body.ExperienceLevel),
+			RemoteFilter: getRemoteFilter(body.RemoteType),
+			JobType: getJobType(body.JobType),
+			DateSincePosted: getDateSincePosted(body.DateSincePosted),
+		}
+
+	}
+}
+
+func 
